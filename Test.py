@@ -51,12 +51,18 @@ def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
 file_path = hf_hub_download(
     repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
 )
-file_path = '/IMG_7293.MOV'
-container = av.open(file_path)
+# file_path = '/IMG_7293.MOV'
+file_path = 'stack1.npy'
+video = np.load(file_path)
+# container = av.open(file_path)
 
 # sample 32 frames
-indices = sample_frame_indices(clip_len=32, frame_sample_rate=4, seg_len=container.streams.video[0].frames)
-video = read_video_pyav(container=container, indices=indices)
+# indices = sample_frame_indices(clip_len=32, frame_sample_rate=4, seg_len=container.streams.video[0].frames)
+# print(container.streams.video[0].frames)
+# print(indices)
+# video = read_video_pyav(container=container, indices=indices)
+# print(video.shape)
+# print(video[0, :, :, 0])
 
 image_processor = VivitImageProcessor.from_pretrained("google/vivit-b-16x2-kinetics400")
 model = VivitForVideoClassification.from_pretrained("google/vivit-b-16x2-kinetics400")
