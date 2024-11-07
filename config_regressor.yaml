@@ -1,0 +1,40 @@
+data_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/synthetic_image_stacks/100_snr_20_30/'
+#data_path: '/scratch/e/emamirez/wolfesea/AsteroidImageGenerator/synthetic_tracklets/synthetic_image_stacks/500000_snr_20_30/'
+#master_file_path: 'siding_spring_test_set/'
+# column names of various files that are generated and read
+master_file_name_train: 'sample_master_100_snr_20_30_train.csv'
+master_file_name_val: 'sample_master_100_snr_20_30_val.csv'
+master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angle', 'theta',
+                       'sigma_g', 'g_12', 'Asteroid_Present', 'Expected_SNR', 'Expected_Signal', 'Original_Image', 'Saved_as_Stack', 'Stack_Mean',
+                       'Stack_Median', 'Stack_Standard_Deviation', 'Stack_Crop_Start', 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
+                       'F5_Center', 'F6_Center', 'F7_Center', 'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
+                       'F14_Center', 'F15_Center', 'F16_Center']              # need to add according to number of frames, not ideal
+center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
+                       'F5_Center', 'F6_Center', 'F7_Center', 'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
+                       'F14_Center', 'F15_Center', 'F16_Center' ]
+
+train: False
+model_name: 'MCG-NJU/videomae-base'
+sample_rate: 1
+fps: 2
+num_epochs: 1
+batch_size: 2
+image_size: 224
+mean: #[0.485, 0.485, 0.485]
+std: #[0.229, 0.224, 0.225]
+remove_unused_columns: False
+eval_strategy: "steps"
+eval_steps: 6000
+save_strategy: "steps"
+save_steps: 6000
+learning_rate: 0.000005
+warmup_ratio: 0.1
+logging_steps: 1000
+load_best_model_at_end: False
+metric_for_best_model: "mae"
+push_to_hub: False
+num_gpus: 4
+resume_from_checkpoint: False
+#resume_from_checkpoint: "/scratch/e/emamirez/wolfesea/VideoTransformer/videomae-base-finetuned-1088800/checkpoint-258000"
+#resume_from_checkpoint: "checkpoint-30000/"
+ignore_data_skip: False
