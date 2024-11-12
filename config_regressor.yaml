@@ -13,7 +13,7 @@ center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
                        'F5_Center', 'F6_Center', 'F7_Center', 'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
                        'F14_Center', 'F15_Center', 'F16_Center' ]
 
-train: False
+train: True
 model_name: 'MCG-NJU/videomae-base'
 sample_rate: 1
 fps: 2
