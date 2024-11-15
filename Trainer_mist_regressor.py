@@ -73,7 +73,7 @@ class VideoDataset(Dataset):
         video_tensor = torch.from_numpy(video_array)
         if self.transform:
             video_tensor = self.transform(video_tensor.permute(1, 0, 2, 3))
-        video_tensor = video_tensor.permute(1, 0, 2, 3)
+            video_tensor = video_tensor.permute(1, 0, 2, 3)
         return {"video": video_tensor, "label": label}
 
 
