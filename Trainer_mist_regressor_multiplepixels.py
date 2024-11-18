@@ -116,13 +116,13 @@ if config['train']:
 
     # Example Video Files and Labels
     video_files = master_file['Saved_as_Stack']
-    # columns_to_transform = ['F1_Center', 'F2_Center']
-    columns_to_transform = ['F1_Center']
+    columns_to_transform = ['F1_Center', 'F2_Center']
+    # columns_to_transform = ['F1_Center']
 
-    # labels = master_file[columns_to_transform].apply(lambda row: torch.tensor(np.concatenate([row['F1_Center'], row['F2_Center']]).astype(float)) /  config['image_size'], axis=1)
-    labels = master_file[columns_to_transform].apply(
-        lambda row: np.concatenate([row['F1_Center']]) / config[
-            'image_size'], axis=1)
+    labels = master_file[columns_to_transform].apply(lambda row: np.concatenate([row['F1_Center'], row['F2_Center']]) /  config['image_size'], axis=1)
+    # labels = master_file[columns_to_transform].apply(
+    #     lambda row: np.concatenate([row['F1_Center']]) / config[
+    #         'image_size'], axis=1)
 
     # Create Dataset and DataLoader
     train_dataset = VideoDataset(video_files=video_files, labels=labels, transform=transform)
@@ -134,12 +134,12 @@ if config['train']:
     # Example Video Files and Labels
     val_video_files = val_master_file['Saved_as_Stack']
 
-    # val_labels = val_master_file[columns_to_transform].apply(
-    #     lambda row: torch.tensor(np.concatenate([row['F1_Center'], row['F2_Center']]).astype(float)) / config[
-    #         'image_size'], axis=1)
     val_labels = val_master_file[columns_to_transform].apply(
-        lambda row: np.concatenate([row['F1_Center']]) / config[
+        lambda row: np.concatenate([row['F1_Center'], row['F2_Center']]) / config[
             'image_size'], axis=1)
+    # val_labels = val_master_file[columns_to_transform].apply(
+    #     lambda row: np.concatenate([row['F1_Center']]) / config[
+    #         'image_size'], axis=1)
 
     # Create Dataset and DataLoader
     val_dataset = VideoDataset(video_files=val_video_files, labels=val_labels, transform=transform)
