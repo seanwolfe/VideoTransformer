@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from docutils.nodes import header
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
@@ -21,6 +22,7 @@ print("Loaded pytorchvideo")
 from torchvision.transforms import (
     Lambda
 )
+from sklearn.metrics import confusion_matrix, classification_report
 
 # metric = evaluate.load(os.path.join(os.environ.get('SCRATCH'), 'huggingface', 'metrics', 'accuracy', 'default', 'accuracy.py'))
 metric = evaluate.load("accuracy")
@@ -32,6 +34,32 @@ def str_to_tuple(x):
     except (ValueError, SyntaxError):
         return x
 
+
+def create_test_file(config):
+    # Directory containing the two subdirectories
+    root_directory = config['test_set_path']
+
+    # Initialize list to store file paths and labels
+    data = []
+
+    # Traverse the directory
+    for label_dir in config['labels']:
+        label = True if label_dir == config['labels'][0] else False
+        folder_path = os.path.join(root_directory, label_dir)
+
+        # Ensure the folder exists to avoid errors
+        if os.path.exists(folder_path):
+            for file_name in os.listdir(folder_path):
+                if file_name.endswith(".npy"):  # Only process .npy files
+                    file_path = os.path.join(folder_path, file_name)
+                    data.append({"file_path": file_path, "label": label})
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Save to CSV
+    df.to_csv(os.path.join(config['test_set_path'], config['master_file_name_test']), index=False)
+    return
 
 def read_master(configuration, master_file_path):
     columns_to_convert = configuration['center_file_columns']
@@ -72,6 +100,8 @@ class VideoDataset(Dataset):
         # Load the video and extract frames
         video_array = np.load(video_path)
         video_tensor = torch.from_numpy(video_array)
+        print(video_path)
+        print(video_tensor.size())
         if self.transform:
             video_tensor = self.transform(video_tensor.permute(1,0,2,3))
         video_tensor = video_tensor.permute(1,0,2,3)
@@ -195,28 +225,106 @@ if config['train']:
     train_results = trainer.train(resume_from_checkpoint=config['resume_from_checkpoint'])
 
 else:
-    raise NotImplementedError
-    """
-    # Evaluation
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print("Device: " + str(device))
+
+    # MCG-NJU/videomae-base-finetuned-kinetics.
+    model_ckpt = config['model_name']
+
+    # Load the VideoMAE model for regression
+    image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
+    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, label2id=label2id, id2label=id2label,
+                                                           ignore_mismatched_sizes=True)
     model.eval()
-    total_mse = 0.0
-    with torch.no_grad():
-        for batch in dataloader:
-            videos, labels = batch
-            outputs = model(videos)
-            predictions = outputs.logits
+    model.to(device)
 
-            loss = model.loss_fct(predictions, labels)
-            total_mse += loss.item()
+    mean = []
+    if config['mean']:
+        mean = config['mean']
+    else:
+        mean = image_processor.image_mean  # for RGB videos typical values
+    std = []
+    if config['std']:
+        std = config['std']
+    else:
+        std = image_processor.image_std
 
-    avg_mse = total_mse / len(dataloader)
-    print(f"Average MSE on validation set: {avg_mse}")
+    # Data Transformations for both val and train
+    transform = transforms.Compose([
+        Lambda(lambda x: x / 255.0),
+        Normalize(mean, std),
+    ])
 
-    # Example Inference
-    video_tensor, _ = dataset[0]  # Get the first video tensor
-    video_tensor = video_tensor.unsqueeze(0)  # Add batch dimension
+    # get test master file
+    test_file_path = os.path.join(config['test_set_path'], config['master_file_name_test'])
+    if not os.path.exists(test_file_path):
+        create_test_file(config)
+    test_file = pd.read_csv(test_file_path, sep=',', header=0, names=config['test_file_columns'])
 
-    outputs = model(video_tensor)
-    predicted_x, predicted_y = outputs.logits[0].detach().numpy()  # Get predicted (x, y) location
-    print(f"Predicted (x, y): ({predicted_x}, {predicted_y})")
-    """
+    # Example Video Files and Labels
+    test_video_files = test_file['file_path']
+    test_labels = test_file['label'].map({True: label2id[class_labels[0]], False: label2id[class_labels[1]]})
+
+    # Create Dataset and DataLoader
+    test_dataset = VideoDataset(video_files=test_video_files, labels=test_labels, transform=transform)
+
+    # Create a DataLoader
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=1,  # Adjust batch size as needed
+        num_workers=4,  # Adjust number of workers as needed
+    )
+
+    # Inference and results storage
+    results = []
+    all_preds = []
+    all_labels = []
+
+    for batch in test_loader:
+        video_tensor = batch["video"].to(device)  # Move video to device
+        true_label = batch["label"].item()  # Extract true label
+
+        # Run inference
+        with torch.no_grad():
+            outputs = model(video_tensor)
+            logits = outputs.logits
+            pred_label = torch.argmax(logits, dim=1).item()
+
+        # Determine result type (TP, TN, FP, FN)
+        if pred_label == true_label:
+            if true_label == 1:
+                result = "TP"
+            else:
+                result = "TN"
+        else:
+            if pred_label == 1:
+                result = "FP"
+            else:
+                result = "FN"
+
+        # Store results
+        sample = test_file['file_path'].iloc[test_loader.dataset.video_files.index(video_tensor.cpu())]
+        just_name = sample.split('_')[0]
+        results.append({
+            "sample_name": just_name,
+            "predicted": pred_label,
+            "true": true_label,
+            "result": result
+        })
+
+        all_preds.append(pred_label)
+        all_labels.append(true_label)
+
+    # Calculate confusion matrix
+    conf_matrix = confusion_matrix(all_labels, all_preds)
+    report = classification_report(all_labels, all_preds, target_names=["Not Present", "Asteroid Present"])
+
+    print("Confusion Matrix:")
+    print(conf_matrix)
+    print("\nClassification Report:")
+    print(report)
+
+    # Save results to CSV
+    df = pd.DataFrame(results)
+    df.to_csv("inference_results.csv", index=False)
+    print("Results saved to inference_results.csv")

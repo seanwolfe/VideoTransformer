@@ -4,6 +4,10 @@ data_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_trackle
 # column names of various files that are generated and read
 master_file_name_train: 'sample_master_100_snr_20_30_train.csv'
 master_file_name_val: 'sample_master_100_snr_20_30_val.csv'
+test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/ss_testset_jp2/arrays/test/'
+master_file_name_test: 'sample_master_test.csv'
+labels: ['Asteroid Present', 'Not']
+test_file_columns: ['file_path', 'label']
 master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angle', 'theta',
                        'sigma_g', 'g_12', 'Asteroid_Present', 'Expected_SNR', 'Expected_Signal', 'Original_Image', 'Saved_as_Stack', 'Stack_Mean',
                        'Stack_Median', 'Stack_Standard_Deviation', 'Stack_Crop_Start', 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
@@ -13,8 +17,9 @@ center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
                        'F5_Center', 'F6_Center', 'F7_Center', 'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
                        'F14_Center', 'F15_Center', 'F16_Center' ]
 
-train: True
+train: False
 model_name: 'MCG-NJU/videomae-base'
+#model_name: 'checkpoint-288000-Ieeeaero2025-classifier'
 mean: #[0.485, 0.485, 0.485]
 std: #[0.229, 0.224, 0.225]
 sample_rate: 1
