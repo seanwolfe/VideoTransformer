@@ -20,7 +20,10 @@ print("Loaded pytorchvideo")
 from torchvision.transforms import (
     Lambda
 )
+
 metric = evaluate.load("mae", "multilist")
+
+
 # metric = evaluate.load(os.path.join(os.environ.get('SCRATCH'), 'huggingface', 'metrics', 'mae', 'mae.py'), "multilist")
 
 
@@ -65,7 +68,7 @@ class VideoDataset(Dataset):
 
     def __getitem__(self, idx):
         video_path = self.video_files[idx]
-        label =  torch.tensor(self.labels[idx], dtype=torch.float)
+        label = torch.tensor(self.labels[idx], dtype=torch.float)
 
         # Load the video and extract frames
         video_array = np.load(video_path)
@@ -89,7 +92,7 @@ if config['train']:
 
     # Load the VideoMAE model for regression
     image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
-    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, num_labels=2)
+    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, num_labels=32)
     model.config.problem_type = "regression"
     model.loss_fct = nn.L1Loss()
 
@@ -105,8 +108,8 @@ if config['train']:
 
     # Data Transformations for both val and train
     transform = transforms.Compose([
-                        Lambda(lambda x: x / 255.0),
-                        Normalize(mean, std),
+        Lambda(lambda x: x / 255.0),
+        Normalize(mean, std),
 
     ])
 
@@ -116,13 +119,19 @@ if config['train']:
 
     # Example Video Files and Labels
     video_files = master_file['Saved_as_Stack']
-    columns_to_transform = ['F1_Center', 'F2_Center']
-    # columns_to_transform = ['F1_Center']
+    columns_to_transform = ['F1_Center', 'F2_Center', 'F3_Center', 'F4_Center', 'F5_Center', 'F6_Center', 'F7_Center',
+                            'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
+                            'F14_Center', 'F15_Center', 'F16_Center']
 
-    labels = master_file[columns_to_transform].apply(lambda row: np.concatenate([row['F1_Center'], row['F2_Center']]) /  config['image_size'], axis=1)
-    # labels = master_file[columns_to_transform].apply(
-    #     lambda row: np.concatenate([row['F1_Center']]) / config[
-    #         'image_size'], axis=1)
+    labels = master_file[columns_to_transform].apply(lambda row: np.concatenate([row['F1_Center'], row['F2_Center'],
+                                                                                 row['F3_Center'], row['F4_Center'],
+                                                                                 row['F5_Center'], row['F6_Center'],
+                                                                                 row['F7_Center'], row['F8_Center'],
+                                                                                 row['F9_Center'], row['F10_Center'],
+                                                                                 row['F11_Center'], row['F12_Center'],
+                                                                                 row['F13_Center'], row['F14_Center'],
+                                                                                 row['F15_Center'], row['F16_Center']])
+                                                                 / config['image_size'], axis=1)
 
     # Create Dataset and DataLoader
     train_dataset = VideoDataset(video_files=video_files, labels=labels, transform=transform)
@@ -135,11 +144,14 @@ if config['train']:
     val_video_files = val_master_file['Saved_as_Stack']
 
     val_labels = val_master_file[columns_to_transform].apply(
-        lambda row: np.concatenate([row['F1_Center'], row['F2_Center']]) / config[
-            'image_size'], axis=1)
-    # val_labels = val_master_file[columns_to_transform].apply(
-    #     lambda row: np.concatenate([row['F1_Center']]) / config[
-    #         'image_size'], axis=1)
+        lambda row: np.concatenate([row['F1_Center'], row['F2_Center'], row['F3_Center'], row['F4_Center'],
+                                    row['F5_Center'], row['F6_Center'],
+                                    row['F7_Center'], row['F8_Center'],
+                                    row['F9_Center'], row['F10_Center'],
+                                    row['F11_Center'], row['F12_Center'],
+                                    row['F13_Center'], row['F14_Center'],
+                                    row['F15_Center'], row['F16_Center']]) / config[
+                        'image_size'], axis=1)
 
     # Create Dataset and DataLoader
     val_dataset = VideoDataset(video_files=val_video_files, labels=val_labels, transform=transform)
@@ -270,7 +282,6 @@ else:
     np_avg_mae = np_total_mae / len(np_dataloader)
     print(f"Average MAE on validation set: {config['image_size'] * np_avg_mae}")
 
-
     # Evaluation
     model.eval()
     total_mae = 0.0
@@ -298,4 +309,3 @@ else:
     # outputs = model(video_tensor)
     # predicted_x, predicted_y = outputs.logits[0].detach().numpy()  # Get predicted (x, y) location
     # print(f"Predicted (x, y): ({predicted_x}, {predicted_y})")
-
