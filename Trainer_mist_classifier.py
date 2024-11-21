@@ -100,13 +100,13 @@ class VideoDataset(Dataset):
         # Load the video and extract frames
         video_array = np.load(video_path)
         video_tensor = torch.from_numpy(video_array)
-        print(video_path)
-        print(video_tensor.size())
+        name = video_path.split('/')[-1]
+
         if self.transform:
             video_tensor = self.transform(video_tensor.permute(1,0,2,3))
         video_tensor = video_tensor.permute(1,0,2,3)
 
-        return {"video": video_tensor, "label": label}
+        return {"name": name,"video": video_tensor, "label": label}
 
 
 with open('config_classifier.yaml', 'r') as f:
@@ -124,6 +124,7 @@ class_labels = sorted({str(path).split("/")[-2] for path in all_video_file_paths
 label2id = {class_labels[0]: int(0), class_labels[1]: int(1)}
 # label2id = {label: i for i, label in enumerate(class_labels)}
 id2label = {i: label for label, i in label2id.items()}
+print(id2label)
 
 
 print(f"Unique classes: {list(label2id.keys())}.")
@@ -279,10 +280,13 @@ else:
     results = []
     all_preds = []
     all_labels = []
+    snr_df = pd.read_csv('snr_values.csv', sep=',', header=0, names=['name', 'SNR'])
 
     for batch in test_loader:
         video_tensor = batch["video"].to(device)  # Move video to device
         true_label = batch["label"].item()  # Extract true label
+        name = batch["name"][0]
+        print(name)
 
         # Run inference
         with torch.no_grad():
@@ -292,24 +296,27 @@ else:
 
         # Determine result type (TP, TN, FP, FN)
         if pred_label == true_label:
-            if true_label == 1:
+            if true_label == 0:
                 result = "TP"
             else:
                 result = "TN"
         else:
-            if pred_label == 1:
+            if pred_label == 0:
                 result = "FP"
             else:
                 result = "FN"
 
-        # Store results
-        sample = test_file['file_path'].iloc[test_loader.dataset.video_files.index(video_tensor.cpu())]
-        just_name = sample.split('_')[0]
+        # Find the SNR value for the sample
+        matching_snr = snr_df[snr_df["name"].apply(lambda x: x in name)]
+        snr_value = matching_snr["SNR"].values[0] if not matching_snr.empty else None
+
+        # Append results
         results.append({
-            "sample_name": just_name,
+            "sample_name": name,
             "predicted": pred_label,
             "true": true_label,
-            "result": result
+            "result": result,
+            "SNR": snr_value
         })
 
         all_preds.append(pred_label)
@@ -317,7 +324,7 @@ else:
 
     # Calculate confusion matrix
     conf_matrix = confusion_matrix(all_labels, all_preds)
-    report = classification_report(all_labels, all_preds, target_names=["Not Present", "Asteroid Present"])
+    report = classification_report(all_labels, all_preds, target_names=["Asteroid Present", "Not"])
 
     print("Confusion Matrix:")
     print(conf_matrix)

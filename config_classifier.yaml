@@ -18,8 +18,8 @@ center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
                        'F14_Center', 'F15_Center', 'F16_Center' ]
 
 train: False
-model_name: 'MCG-NJU/videomae-base'
-#model_name: 'checkpoint-288000-Ieeeaero2025-classifier'
+#model_name: 'MCG-NJU/videomae-base'
+model_name: 'videomae-base-finetuned-1014670-snr37/checkpoint-60000'
 mean: #[0.485, 0.485, 0.485]
 std: #[0.229, 0.224, 0.225]
 sample_rate: 1
