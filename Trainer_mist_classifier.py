@@ -256,15 +256,27 @@ else:
         Normalize(mean, std),
     ])
 
-    # get test master file
+    #  get test master file
     test_file_path = os.path.join(config['test_set_path'], config['master_file_name_test'])
-    if not os.path.exists(test_file_path):
-        create_test_file(config)
-    test_file = pd.read_csv(test_file_path, sep=',', header=0, names=config['test_file_columns'])
+    if 'c' in config['options']:
+        test_file = read_master(config, test_file_path)
+        test_video_files = test_file['Saved_as_Stack']
+        test_labels = test_file['Asteroid_Present'].map(
+            {True: label2id[class_labels[0]], False: label2id[class_labels[1]]})
+        snr_df = pd.DataFrame(columns=['name', 'SNR'])
+        snr_df['SNR'] = test_file['Expected_SNR']
+        snr_df['name'] = test_file['Saved_as_Stack'].apply(lambda x: x.split('/')[-1])
+    else:
 
-    # Example Video Files and Labels
-    test_video_files = test_file['file_path']
-    test_labels = test_file['label'].map({True: label2id[class_labels[0]], False: label2id[class_labels[1]]})
+        if not os.path.exists(test_file_path):
+            create_test_file(config)
+        test_file = pd.read_csv(test_file_path, sep=',', header=0, names=config['test_file_columns'])
+
+        # Example Video Files and Labels
+        test_video_files = test_file['file_path']
+        test_labels = test_file['label'].map({True: label2id[class_labels[0]], False: label2id[class_labels[1]]})
+
+        snr_df = pd.read_csv('snr_values.csv', sep=',', header=0, names=['name', 'SNR'])
 
     # Create Dataset and DataLoader
     test_dataset = VideoDataset(video_files=test_video_files, labels=test_labels, transform=transform)
@@ -280,7 +292,6 @@ else:
     results = []
     all_preds = []
     all_labels = []
-    snr_df = pd.read_csv('snr_values.csv', sep=',', header=0, names=['name', 'SNR'])
 
     for batch in test_loader:
         video_tensor = batch["video"].to(device)  # Move video to device
@@ -306,18 +317,36 @@ else:
             else:
                 result = "FN"
 
+
         # Find the SNR value for the sample
         matching_snr = snr_df[snr_df["name"].apply(lambda x: x in name)]
         snr_value = matching_snr["SNR"].values[0] if not matching_snr.empty else None
 
-        # Append results
-        results.append({
-            "sample_name": name,
-            "predicted": pred_label,
-            "true": true_label,
-            "result": result,
-            "SNR": snr_value
-        })
+        if 'c' in config['options']:
+            matching = test_file[test_file['Saved_as_Stack'].apply(lambda x: name in x)]
+            v_value = matching['H'].values[0]
+            om_value = matching['omega'].values[0]
+
+            # Append results
+            results.append({
+                "sample_name": name,
+                "predicted": pred_label,
+                "true": true_label,
+                "result": result,
+                "SNR": snr_value,
+                "V": v_value,
+                "Omega": om_value
+            })
+
+        else:
+            # Append results
+            results.append({
+                "sample_name": name,
+                "predicted": pred_label,
+                "true": true_label,
+                "result": result,
+                "SNR": snr_value
+            })
 
         all_preds.append(pred_label)
         all_labels.append(true_label)
@@ -333,5 +362,5 @@ else:
 
     # Save results to CSV
     df = pd.DataFrame(results)
-    df.to_csv("inference_results.csv", index=False)
+    df.to_csv(config['output_file_name'], index=False)
     print("Results saved to inference_results.csv")

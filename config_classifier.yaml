@@ -4,8 +4,11 @@ data_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_trackle
 # column names of various files that are generated and read
 master_file_name_train: 'sample_master_100_snr_20_30_train.csv'
 master_file_name_val: 'sample_master_100_snr_20_30_val.csv'
-test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/ss_testset_jp2/arrays/test/'
-master_file_name_test: 'sample_master_test.csv'
+#test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/ss_testset_jp2/arrays/test/'
+test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/test_025001520/'
+master_file_name_test: 'test_set.csv'
+options: 'c'  # c is for completeness validation, while nothing is for the siding spring real asteroid test set, paths should still be set appropriately irregardless of choice
+output_file_name: 'inference_results.csv'
 labels: ['Asteroid Present', 'Not']
 test_file_columns: ['file_path', 'label']
 master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angle', 'theta',
