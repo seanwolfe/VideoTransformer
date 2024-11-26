@@ -267,7 +267,6 @@ else:
         snr_df['SNR'] = test_file['Expected_SNR']
         snr_df['name'] = test_file['Saved_as_Stack'].apply(lambda x: x.split('/')[-1])
     else:
-
         if not os.path.exists(test_file_path):
             create_test_file(config)
         test_file = pd.read_csv(test_file_path, sep=',', header=0, names=config['test_file_columns'])

@@ -16,6 +16,8 @@ from pytorchvideo.transforms import (
 )
 import evaluate
 
+from Trainer_mist_classifier import results
+
 print("Loaded pytorchvideo")
 from torchvision.transforms import (
     Lambda
@@ -73,10 +75,11 @@ class VideoDataset(Dataset):
         # Load the video and extract frames
         video_array = np.load(video_path)
         video_tensor = torch.from_numpy(video_array)
+        name = video_path.split('/')[-1]
         if self.transform:
             video_tensor = self.transform(video_tensor.permute(1, 0, 2, 3))
             video_tensor = video_tensor.permute(1, 0, 2, 3)
-        res = {"video": video_tensor, "label": label}
+        res = {"name": name, "video": video_tensor, "label": label}
         return res
 
 
@@ -202,12 +205,18 @@ if config['train']:
 
 else:
 
-    checkpoint_path = os.path.join('videomae-base-finetuned-1017436', 'checkpoint-30000')
-    model = VideoMAEForVideoClassification.from_pretrained(checkpoint_path, local_files_only=True)
-    image_processor = VideoMAEImageProcessor.from_pretrained(checkpoint_path)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print("Device: " + str(device))
+
+    # MCG-NJU/videomae-base-finetuned-kinetics.
+    model_ckpt = config['model_name']
+
+    # Load the VideoMAE model for regression
+    image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
+    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, num_labels=32)
+    model.config.problem_type = "regression"
     model.loss_fct = nn.L1Loss()
 
-    mean = []
     if config['mean']:
         mean = config['mean']
     else:
@@ -218,79 +227,57 @@ else:
     else:
         std = image_processor.image_std
 
-        # Data Transformations for both val and train
-        transform = transforms.Compose([
-            Lambda(lambda x: x / 255.0),
-            Normalize(mean, std),
+    # Data Transformations for both val and train
+    transform = transforms.Compose([
+        Lambda(lambda x: x / 255.0),
+        Normalize(mean, std),
 
-        ])
+    ])
 
-    # get val master file
-    val_master_file_path = os.path.join(config['data_path'], config['master_file_name_val'])
-    val_master_file = read_master(config, val_master_file_path)
+    #  get test master file
+    test_file_path = os.path.join(config['test_set_path'], config['master_file_name_test'])
+    test_file = read_master(config, test_file_path)
+    test_video_files = test_file['Saved_as_Stack']
+    columns_to_transform = ['F1_Center', 'F2_Center', 'F3_Center', 'F4_Center', 'F5_Center', 'F6_Center', 'F7_Center',
+                            'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
+                            'F14_Center', 'F15_Center', 'F16_Center']
 
-    asteroid_present = val_master_file[val_master_file['Asteroid_Present'] == True]
-    not_present = val_master_file[val_master_file['Asteroid_Present'] == False].reset_index(drop=True)
+    test_labels = test_file[columns_to_transform].apply(lambda row: np.concatenate([row['F1_Center'], row['F2_Center'],
+                                                                                 row['F3_Center'], row['F4_Center'],
+                                                                                 row['F5_Center'], row['F6_Center'],
+                                                                                 row['F7_Center'], row['F8_Center'],
+                                                                                 row['F9_Center'], row['F10_Center'],
+                                                                                 row['F11_Center'], row['F12_Center'],
+                                                                                 row['F13_Center'], row['F14_Center'],
+                                                                                 row['F15_Center'], row['F16_Center']])
+                                                                 / config['image_size'], axis=1)
 
-    # Example Video Files and Labels
-    ap_video_files = asteroid_present['Saved_as_Stack']
-    ap_labels = asteroid_present['F1_Center'].apply(
-        lambda row: (row[0] / config['image_size'], row[1] / config['image_size']))
+    snr_df = pd.DataFrame(columns=['name', 'SNR'])
+    snr_df['SNR'] = test_file['Expected_SNR']
+    snr_df['name'] = test_file['Saved_as_Stack'].apply(lambda x: x.split('/')[-1])
 
     # Create Dataset and DataLoader
-    ap_dataset = VideoDataset(video_files=ap_video_files, labels=ap_labels, transform=transform)
+    test_dataset = VideoDataset(video_files=test_video_files, labels=test_labels, transform=transform)
 
     # Create a DataLoader
-    ap_dataloader = torch.utils.data.DataLoader(
-        ap_dataset,
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
         batch_size=1,  # Adjust batch size as needed
         num_workers=4,  # Adjust number of workers as needed
     )
-
-    # Example Video Files and Labels
-    np_video_files = not_present['Saved_as_Stack']
-    np_labels = not_present['F1_Center'].apply(
-        lambda row: (row[0] / config['image_size'], row[1] / config['image_size']))
-
-    # Create Dataset and DataLoader
-    np_dataset = VideoDataset(video_files=np_video_files, labels=np_labels, transform=transform)
-
-    # Create a DataLoader
-    np_dataloader = torch.utils.data.DataLoader(
-        np_dataset,
-        batch_size=1,  # Adjust batch size as needed
-        num_workers=4,  # Adjust number of workers as needed
-    )
-
-    # Evaluation
-    model.eval()
-    np_total_mae = 0.0
-    with torch.no_grad():
-        for batch in np_dataloader:
-            videos = batch['video']
-            labels = batch['label']
-            outputs = model(videos)
-            print('\n Not Present')
-            predictions = outputs.logits
-            print('Predicted Pixel Location: ' + str(config['image_size'] * predictions))
-            print('Actual Pixel Location: ' + str(config['image_size'] * labels))
-
-            loss = model.loss_fct(predictions, labels)
-            print('MAE: ' + str(config['image_size'] * loss) + '\n')
-            np_total_mae += loss.item()
-
-    np_avg_mae = np_total_mae / len(np_dataloader)
-    print(f"Average MAE on validation set: {config['image_size'] * np_avg_mae}")
 
     # Evaluation
     model.eval()
     total_mae = 0.0
-    with torch.no_grad():
-        for batch in ap_dataloader:
-            videos = batch['video']
-            labels = batch['label']
+    results = []
+
+    for batch in test_loader:
+        videos = batch['video'].to(device)
+        labels = batch['label'].item()
+        name = batch["name"][0]
+
+        with torch.no_grad():
             outputs = model(videos)
-            print('\n Asteroid Present')
             predictions = outputs.logits
             print('Predicted Pixel Location: ' + str(config['image_size'] * predictions))
             print('Actual Pixel Location: ' + str(config['image_size'] * labels))
@@ -299,13 +286,30 @@ else:
             print('MAE: ' + str(config['image_size'] * loss) + '\n')
             total_mae += loss.item()
 
-    avg_mae = total_mae / len(ap_dataloader)
-    print(f"Average MSE on validation set: {config['image_size'] * avg_mae}")
+        matching = test_file[test_file['Saved_as_Stack'].apply(lambda x: name in x)]
+        v_value = matching['H'].values[0]
+        om_value = matching['omega'].values[0]
+        theta_value = matching['theta'].values[0]
+        snr_value = matching['Expected_SNR'].values[0]
 
-    # Example Inference
-    # video_tensor, _ = dataset[0]  # Get the first video tensor
-    # video_tensor = video_tensor.unsqueeze(0)  # Add batch dimension
-    #
-    # outputs = model(video_tensor)
-    # predicted_x, predicted_y = outputs.logits[0].detach().numpy()  # Get predicted (x, y) location
-    # print(f"Predicted (x, y): ({predicted_x}, {predicted_y})")
+        # Append results
+        results.append({
+            "sample_name": name,
+            "V": v_value,
+            "omega": om_value,
+            "theta": theta_value,
+            "Expected_SNR": snr_value,
+            "predicted_positions": predictions,
+            "true_positions": labels,
+            "position_MAE": loss.item(),
+            })
+
+    avg_mae = total_mae / len(test_loader)
+    print(f"Average MAE on validation set: {config['image_size'] * avg_mae}")
+
+    # Save results to CSV
+    df = pd.DataFrame(results)
+    df.to_csv(config['output_file_name'], index=False)
+    print("Results saved to inference_results_regression.csv")
+
+

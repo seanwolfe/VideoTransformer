@@ -180,10 +180,16 @@ if config['train']:
 
 else:
 
-    checkpoint_path = os.path.join('videomae-base-finetuned-1017436', 'checkpoint-30000')
-    model = VideoMAEForVideoClassification.from_pretrained(checkpoint_path, local_files_only=True)
-    image_processor = VideoMAEImageProcessor.from_pretrained(checkpoint_path)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print("Device: " + str(device))
+
+    # MCG-NJU/videomae-base-finetuned-kinetics.
+    model_ckpt = config['model_name']
+
+    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, local_files_only=True)
+    image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
     model.loss_fct = nn.L1Loss()
+    m
 
     mean = []
     if config['mean']:
