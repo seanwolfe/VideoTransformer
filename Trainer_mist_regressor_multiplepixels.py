@@ -16,8 +16,6 @@ from pytorchvideo.transforms import (
 )
 import evaluate
 
-from Trainer_mist_classifier import results
-
 print("Loaded pytorchvideo")
 from torchvision.transforms import (
     Lambda
@@ -204,7 +202,6 @@ if config['train']:
     train_results = trainer.train(resume_from_checkpoint=config['resume_from_checkpoint'])
 
 else:
-
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("Device: " + str(device))
 
@@ -213,7 +210,7 @@ else:
 
     # Load the VideoMAE model for regression
     image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
-    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, num_labels=32)
+    model = VideoMAEForVideoClassification.from_pretrained(model_ckpt) #, num_labels=32)
     model.config.problem_type = "regression"
     model.loss_fct = nn.L1Loss()
 
@@ -273,17 +270,17 @@ else:
 
     for batch in test_loader:
         videos = batch['video'].to(device)
-        labels = batch['label'].item()
+        labels = batch['label']
         name = batch["name"][0]
-
+        print(name)
         with torch.no_grad():
             outputs = model(videos)
             predictions = outputs.logits
-            print('Predicted Pixel Location: ' + str(config['image_size'] * predictions))
-            print('Actual Pixel Location: ' + str(config['image_size'] * labels))
+            # print('Predicted Pixel Location: ' + str(config['image_size'] * predictions))
+            # print('Actual Pixel Location: ' + str(config['image_size'] * labels))
 
             loss = model.loss_fct(predictions, labels)
-            print('MAE: ' + str(config['image_size'] * loss) + '\n')
+            # print('MAE: ' + str(config['image_size'] * loss) + '\n')
             total_mae += loss.item()
 
         matching = test_file[test_file['Saved_as_Stack'].apply(lambda x: name in x)]
@@ -299,8 +296,8 @@ else:
             "omega": om_value,
             "theta": theta_value,
             "Expected_SNR": snr_value,
-            "predicted_positions": predictions,
-            "true_positions": labels,
+            "predicted_positions": predictions.tolist()[0],
+            "true_positions": labels.tolist()[0],
             "position_MAE": loss.item(),
             })
 

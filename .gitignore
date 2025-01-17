@@ -2,5 +2,6 @@ checkpoint-288000-Ieeeaero2025-classifier/
 mae/
 Outputfiles/
 Results/
-siding_spring_test_set_classifier_mp4s/
+siding_spring_test_set_classifier_mp4s_ieee_aero/
 to_sync
+.gitignore

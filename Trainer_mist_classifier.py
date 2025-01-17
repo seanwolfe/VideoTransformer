@@ -231,6 +231,7 @@ else:
 
     # MCG-NJU/videomae-base-finetuned-kinetics.
     model_ckpt = config['model_name']
+    print(model_ckpt)
 
     # Load the VideoMAE model for regression
     image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)

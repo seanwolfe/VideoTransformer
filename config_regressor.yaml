@@ -2,6 +2,11 @@ data_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_trackle
 #data_path: '/scratch/e/emamirez/wolfesea/AsteroidImageGenerator/synthetic_tracklets/synthetic_image_stacks/500000_snr_20_30/'
 #master_file_path: 'siding_spring_test_set/'
 # column names of various files that are generated and read
+#test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/ss_testset_jp2/arrays/test/'
+test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/test_025001530/'
+master_file_name_test: 'test_set.csv'
+#master_file_name_test: 'sample_master_test.csv'
+output_file_name: 'inference_results_completeness_reg.csv'
 master_file_name_train: 'sample_master_100_snr_20_30_train.csv'
 master_file_name_val: 'sample_master_100_snr_20_30_val.csv'
 master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angle', 'theta',
@@ -12,9 +17,13 @@ master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angl
 center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
                        'F5_Center', 'F6_Center', 'F7_Center', 'F8_Center', 'F9_Center', 'F10_Center', 'F11_Center', 'F12_Center', 'F13_Center',
                        'F14_Center', 'F15_Center', 'F16_Center' ]
-
-train: True
-model_name: 'MCG-NJU/videomae-base'
+velocity_columns_to_convert: ['predicted_positions', 'true_positions']
+velocity_columns: ['sample_name', 'V', 'omega', 'theta', 'Expected_SNR', 'predicted_positions', 'true_positions', 'position_MAE']
+dt: 31.25
+pixel_scale: 0.66
+train: False
+model_name: 'Models/videomae-base-finetuned-563573-snr330-reg/checkpoint-70000'
+#model_name: 'MCG-NJU/videomae-base'
 sample_rate: 1
 fps: 2
 num_epochs: 1

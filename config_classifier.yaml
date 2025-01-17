@@ -5,10 +5,11 @@ data_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_trackle
 master_file_name_train: 'sample_master_100_snr_20_30_train.csv'
 master_file_name_val: 'sample_master_100_snr_20_30_val.csv'
 #test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/ss_testset_jp2/arrays/test/'
-test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/test_025001520/'
+test_set_path: '/media/aeromec/Seagate Desktop Drive/asteroid_data/synthetic_tracklets/test_025001530/'
 master_file_name_test: 'test_set.csv'
+#master_file_name_test: 'sample_master_test.csv'
 options: 'c'  # c is for completeness validation, while nothing is for the siding spring real asteroid test set, paths should still be set appropriately irregardless of choice
-output_file_name: 'inference_results.csv'
+output_file_name: 'inference_results_completeness.csv'
 labels: ['Asteroid Present', 'Not']
 test_file_columns: ['file_path', 'label']
 master_file_columns: [ 'H', 'omega', 'obs-ast-dist', 'sun-ast-dist', 'phase_angle', 'theta',
@@ -22,7 +23,9 @@ center_file_columns: [ 'F1_Center', 'F2_Center', 'F3_Center', 'F4_Center',
 
 train: False
 #model_name: 'MCG-NJU/videomae-base'
-model_name: 'videomae-base-finetuned-1014670-snr37/checkpoint-60000'
+#model_name: 'videomae-base-finetuned-1002196-snr23/checkpoint-285000'
+#model_name: 'videomae-base-finetuned-1014670-snr37/checkpoint-60000'
+model_name: 'videomae-base-finetuned-1024954-snr215-gs/checkpoint-84000'
 mean: #[0.485, 0.485, 0.485]
 std: #[0.229, 0.224, 0.225]
 sample_rate: 1

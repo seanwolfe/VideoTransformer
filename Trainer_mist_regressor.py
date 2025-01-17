@@ -188,8 +188,8 @@ else:
 
     model = VideoMAEForVideoClassification.from_pretrained(model_ckpt, local_files_only=True)
     image_processor = VideoMAEImageProcessor.from_pretrained(model_ckpt)
-    model.loss_fct = nn.L1Loss()
-    m
+    #model.loss_fct = nn.L1Loss()
+    #model.
 
     mean = []
     if config['mean']:
